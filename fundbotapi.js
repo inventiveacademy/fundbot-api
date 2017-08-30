@@ -58,7 +58,7 @@ function getApplications(req, res, next) {
 	console.log("get: all");
     Application.find({"isdeleted":false},function (err, applications) {
 	  if (err) return console.error(err);
-	  console.log(applications)
+	  //console.log(applications)
 	  res.send(applications)
 	})
 }
@@ -68,7 +68,7 @@ function getApplicationsById(req, res, next) {
 	console.log("get: "+id)    
 	Application.find({"isdeleted":false, "_id":id}, function (err, applications) {
 	  if (err) return console.error(err);
-	  console.log(applications)
+	  //console.log(applications)
 	  res.send(applications)
 	})
 }

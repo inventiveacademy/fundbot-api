@@ -64,7 +64,7 @@ function getApplications(req, res, next) {
 }
 
 function getApplicationsById(req, res, next) {
-	let id = req.body._id
+	let id = req.params.id
 	console.log("get: "+id)    
 	Application.find({"isdeleted":false, "_id":id}, function (err, applications) {
 	  if (err) return console.error(err);
@@ -99,8 +99,6 @@ function postApplication(req, res, next) {
         	res.send(result)
     })
 }
-
-
 
 //routes
 server.get('/', getApplications);

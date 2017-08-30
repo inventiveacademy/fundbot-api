@@ -1,0 +1,25 @@
+{
+  "name": "fundbot-api-2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "fundbotapi.js",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "mongoose": "^4.11.9",
+    "restify": "^5.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inventivegroup/fundbot-api-2.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/inventivegroup/fundbot-api-2/issues"
+  },
+  "homepage": "https://github.com/inventivegroup/fundbot-api-2#readme"
+}

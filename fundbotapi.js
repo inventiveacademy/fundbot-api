@@ -56,7 +56,17 @@ function formatNow () {
 
 function getApplications(req, res, next) {
 	console.log("get: all");
-    Application.find(function (err, applications) {
+    Application.find({"isdeleted":false},function (err, applications) {
+	  if (err) return console.error(err);
+	  console.log(applications)
+	  res.send(applications)
+	})
+}
+
+function getApplicationsById(req, res, next) {
+	let id = req.body._id
+	console.log("get: "+id)    
+	Application.find({"isdeleted":false, "_id":id}, function (err, applications) {
 	  if (err) return console.error(err);
 	  console.log(applications)
 	  res.send(applications)
@@ -90,9 +100,12 @@ function postApplication(req, res, next) {
     })
 }
 
+
+
 //routes
 server.get('/', getApplications);
 server.get('/applications', getApplications);
+server.get('/applications/:id', getApplicationsById);
 server.post('/applications', postApplication);
 
 

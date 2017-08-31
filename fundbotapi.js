@@ -96,9 +96,10 @@ function getdeletedApplications(req, res, next) {
 }
 
 function getApplicationsByQuery(req, res, next) {
-	query =JSON.stringify(req.query)
-    console.log("get: by query params "+query);
-    Application.find(req.query, function(err, applications) {
+	query =req.query
+	query.isdeleted=false
+    console.log("get: by query params "+JSON.stringify(query));
+    Application.find(query, function(err, applications) {
         if (err) {
             console.log(err)
             res.status(500).send(err)
@@ -130,8 +131,8 @@ function updateApplicationById(req, res, next) {
 	        applications.zip = req.body.zip
 	        applications.city = req.body.city
 	        applications.state = req.body.state
-	        applications.applicationstate = req.body.applicationstate
-	        applications.createdate = req.body.createdate
+	        // applications.applicationstate = req.body.applicationstate
+	        // applications.createdate = req.body.createdate
 	        applications.modifydate = date
 	        applications.isdeleted = false
 
@@ -166,6 +167,30 @@ function deleteApplicationById(req, res, next) {
 		        }
 		        else {
 		        	console.log(applications.id + ' soft deleted')
+		        	res.send(result)
+		        }
+		    })
+        }
+    })
+} 
+
+function undeleteApplicationById(req, res, next) {
+    let id = req.params.id
+    console.log("undelete: " + id)
+    Application.findById(id, function(err, applications) {
+        if (err) {
+            console.log(err)
+            res.status(500).send(err)
+        } 
+        else {
+        	applications.isdeleted = false
+        	applications.save(function(err, result) {
+		        if (err) {
+		            console.log(err)
+		            res.status(500).send(err)
+		        }
+		        else {
+		        	console.log(applications.id + ' un-deleted')
 		        	res.send(result)
 		        }
 		    })
@@ -211,9 +236,15 @@ server.get('/applications', getApplications);
 server.get('/applications/:id', getApplicationById);
 server.get('/applications-search', getApplicationsByQuery);
 server.get('/getdeletedapplications', getdeletedApplications);
+
 server.post('/applications', postApplication);
+
 server.del('/applications/:id', deleteApplicationById);
+
 server.put('/applications/:id', updateApplicationById);
+server.put('/undeleteapplication/:id', undeleteApplicationById)
+
+
 
 
 //include routes 
@@ -236,3 +267,4 @@ server.use(function(err, req, res, next) {
         error: {}
     });
 });
+

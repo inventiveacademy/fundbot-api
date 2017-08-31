@@ -6,6 +6,7 @@
   "dependencies": {
     "body-parser": "^1.17.2",
     "mongoose": "^4.11.9",
+    "query-parser": "0.0.1",
     "restify": "^5.2.0"
   },
   "devDependencies": {},

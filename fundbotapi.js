@@ -28,6 +28,22 @@ var applicationSchema = new Schema({
     isdeleted: Boolean
 
 });
+
+var exposedRoutes=`
+get '/'                            = get all
+get '/applications'                = get all
+get '/applications/:id'            = get by id
+get '/applications-search'         = get by search params
+get '/getdeletedapplications'      = get all deleted applications
+
+post '/applications'               = create a new application
+
+del '/applications/:id'            = soft delete an application
+
+put '/applications/:id'            = update by id
+put '/undeleteapplication/:id'     = undelete by id`
+
+
 var Application = mongoose.model('Application', applicationSchema)
 
 //mongodb connection
@@ -42,7 +58,9 @@ db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
     var port = 3008
     server.listen(port, function() {
-        console.log('%s listening at %s', server.name, `http://localhost:${port}`);
+        console.log('%s listening at %s', server.name, `http://localhost:${port}
+${exposedRoutes}`
+		);
     })
 });
 

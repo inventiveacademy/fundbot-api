@@ -1,13 +1,23 @@
 // mongoose 4.3.x
 var mongoose = require('mongoose')
 var restify = require('restify')
+var session = require('express-session')
+var cookieParser = require('cookie-parser')
+var mongoStore = require('connect-mongo')(session)
 var bodyParser = require('body-parser')
 var queryParser = require('query-parser')
+var bcrypt = require('bcrypt');
+const SALT_ROUNDS = 10;
 var server = restify.createServer()
+
 server.name = 'FundBot API'
 
 server.use(restify.plugins.bodyParser());
 server.use(restify.plugins.queryParser());
+
+// attach the session manager
+
+var secret = "don't tell anyone"
 
 var ObjectId = require('mongodb').ObjectID;
 
@@ -26,27 +36,38 @@ var applicationSchema = new Schema({
     createdate: Date,
     modifydate: Date,
     isdeleted: Boolean
-
 });
 
-var exposedRoutes=`
-get '/'                            = get all
-get '/applications'                = get all
-get '/applications/:id'            = get by id
-get '/applications-search'         = get by search params
-get '/getdeletedapplications'      = get all deleted applications
-
-post '/applications'               = create a new application
-
-del '/applications/:id'            = soft delete an application
-
-put '/applications/:id'            = update by id
-put '/undeleteapplication/:id'     = undelete by id`
+var loginSchema = new Schema({
+    user: String,
+    pwd: String,
+    lastlogin: Date
+});
 
 
 var Application = mongoose.model('Application', applicationSchema)
+var Login = mongoose.model('Login', loginSchema)
+
+
+var exposedRoutes = `
+get '/'                                  = get all
+get '/applications'                      = get all
+get '/applications/:id'                  = get by id
+get '/applications-search?field=fvalue'  = get by search params
+get '/getdeletedapplications'            = get all deleted applications
+
+post '/applications'                     = create a new application
+post '/login?user=xxx&pwd=yyy'           = login to secure section
+
+del '/applications/:id'                  = soft delete an application
+
+put '/applications/:id'                  = update by id
+put '/undeleteapplication/:id'           = undelete by id
+======================================================================`
+
 
 //mongodb connection
+// var mongodbUri='mongodb://localhost:27017/fundbot'
 var mongodbUri = 'mongodb://team2:inventive@ds161443.mlab.com:61443/fundbot';
 mongoose.Promise = global.Promise;
 mongoose.connect(mongodbUri, { useMongoClient: true });
@@ -59,10 +80,19 @@ db.once('open', function() {
     var port = 3008
     server.listen(port, function() {
         console.log('%s listening at %s', server.name, `http://localhost:${port}
-${exposedRoutes}`
-		);
+${exposedRoutes}`);
     })
 });
+
+server.use(session({
+    resave: true,
+    saveUninitialized: true,
+    secret: secret,
+    store: new mongoStore({
+        mongooseConnection: db,
+        collection: 'sessions' // default
+    })
+}));
 
 function formatNow() {
     var pad = function(n) { return n < 10 ? "0" + n : n; };
@@ -80,7 +110,7 @@ function getApplications(req, res, next) {
     Application.find({ "isdeleted": false }, function(err, applications) {
         if (err) {
             console.log(err)
-            res.status(500).send(err)
+            res.send(500,err)
         } else {
             //console.log(applications)
             res.send(applications)
@@ -94,9 +124,8 @@ function getApplicationById(req, res, next) {
     Application.find({ "isdeleted": false, "_id": id }, function(err, applications) {
         if (err) {
             console.log(err)
-            res.status(500).send(err)
-        } 
-        else res.send(applications)
+            res.send(500,err)
+        } else res.send(applications)
     })
 }
 
@@ -105,7 +134,7 @@ function getdeletedApplications(req, res, next) {
     Application.find({ "isdeleted": true }, function(err, applications) {
         if (err) {
             console.log(err)
-            res.status(500).send(err)
+            res.send(500,err)
         } else {
             //console.log(applications)
             res.send(applications)
@@ -114,13 +143,13 @@ function getdeletedApplications(req, res, next) {
 }
 
 function getApplicationsByQuery(req, res, next) {
-	query =req.query
-	query.isdeleted=false
-    console.log("get: by query params "+JSON.stringify(query));
+    query = req.query
+    query.isdeleted = false
+    console.log("get: by query params " + JSON.stringify(query));
     Application.find(query, function(err, applications) {
         if (err) {
             console.log(err)
-            res.status(500).send(err)
+            res.send(500,err)
         } else {
             //console.log(applications)
             res.send(applications)
@@ -133,38 +162,36 @@ function updateApplicationById(req, res, next) {
     console.log("update: " + id)
     Application.findById(id, function(err, applications) {
         if (err) {
-        	console.log(err)
-        	res.status(500).send(err)
+            console.log(err)
+            res.send(500,err)
+        } else {
+            //console.log(applications)
+            var date = new Date()
+
+            applications.firstname = req.body.firstname
+            applications.middlename = req.body.middlename
+            applications.lastname = req.body.lastname
+            applications.email = req.body.email
+            applications.contactphone = req.body.contactphone
+            applications.address = req.body.address
+            applications.zip = req.body.zip
+            applications.city = req.body.city
+            applications.state = req.body.state
+            // applications.applicationstate = req.body.applicationstate
+            // applications.createdate = req.body.createdate
+            applications.modifydate = date
+            applications.isdeleted = false
+
+            applications.save(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.send(500,err)
+                } else {
+                    console.log(applications.id + ' updated')
+                    res.send(result)
+                }
+            })
         }
-        else {
-	        //console.log(applications)
-	        var date = new Date()
-
-	        applications.firstname = req.body.firstname
-	        applications.middlename = req.body.middlename
-	        applications.lastname = req.body.lastname
-	        applications.email = req.body.email
-	        applications.contactphone = req.body.contactphone
-	        applications.address = req.body.address
-	        applications.zip = req.body.zip
-	        applications.city = req.body.city
-	        applications.state = req.body.state
-	        // applications.applicationstate = req.body.applicationstate
-	        // applications.createdate = req.body.createdate
-	        applications.modifydate = date
-	        applications.isdeleted = false
-
-	        applications.save(function(err, result) {
-	        	if (err) {
-	        		console.log(err)
-	        		res.status(500).send(err)
-	        	}
-	            else {
-	                console.log(applications.id + ' updated')
-	                res.send(result)
-	            }
-	        })
-	    }
     })
 }
 
@@ -174,23 +201,21 @@ function deleteApplicationById(req, res, next) {
     Application.findById(id, function(err, applications) {
         if (err) {
             console.log(err)
-            res.status(500).send(err)
-        } 
-        else {
-        	applications.isdeleted = true
-        	applications.save(function(err, result) {
-		        if (err) {
-		            console.log(err)
-		            res.status(500).send(err)
-		        }
-		        else {
-		        	console.log(applications.id + ' soft deleted')
-		        	res.send(result)
-		        }
-		    })
+            res.send(500,err)
+        } else {
+            applications.isdeleted = true
+            applications.save(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.send(500,err)
+                } else {
+                    console.log(applications.id + ' soft deleted')
+                    res.send(result)
+                }
+            })
         }
     })
-} 
+}
 
 function undeleteApplicationById(req, res, next) {
     let id = req.params.id
@@ -198,23 +223,21 @@ function undeleteApplicationById(req, res, next) {
     Application.findById(id, function(err, applications) {
         if (err) {
             console.log(err)
-            res.status(500).send(err)
-        } 
-        else {
-        	applications.isdeleted = false
-        	applications.save(function(err, result) {
-		        if (err) {
-		            console.log(err)
-		            res.status(500).send(err)
-		        }
-		        else {
-		        	console.log(applications.id + ' un-deleted')
-		        	res.send(result)
-		        }
-		    })
+            res.send(500,err)
+        } else {
+            applications.isdeleted = false
+            applications.save(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.send(500,err)
+                } else {
+                    console.log(applications.id + ' un-deleted')
+                    res.send(result)
+                }
+            })
         }
     })
-} 
+}
 
 function postApplication(req, res, next) {
     console.log("post")
@@ -239,12 +262,77 @@ function postApplication(req, res, next) {
     application.save(function(err, result) {
         if (err) {
             console.log(err)
-            res.status(500).send(err)
+            res.send(500,err)
+        } else {
+            console.log(application.firstname + ' ' + application.lastname + ' saved to database')
+            res.send(result)
         }
-        else {
-        	console.log(application.firstname + ' ' + application.lastname + ' saved to database')
-        	res.send(result)
+    })
+}
+
+function login(req, res, next) {
+    var hashed = gethash(req.query.pwd)
+    console.log('hashed pwd:' + hashed)
+    console.log("user: " + req.query.user + " pwd: " + req.query.pwd)
+
+    Login.findOne({ "user": req.query.user, "pwd": req.query.pwd }, function(err, user) {
+        if (err) {
+            console.log(err)
+            res.send(500,err)
+        } else {
+            if (!user) {
+                res.send(401,"login failed")
+            } else {
+                var hour = 3600000
+                req.session.cookie.expires = new Date(Date.now() + hour)
+                req.session.user = user.user
+                req.session.loggedin = true
+                user.lastlogin = new Date()
+	            user.save()
+                
+                console.log(user.user + ' logged in')
+                res.send("login success")
+            }
         }
+        return next();
+    })
+}
+
+
+async function createLogin (req, res, next) {
+	console.log(req.query.pwd)
+	try {
+		// var hashed = await gethash(req.query.pwd)
+		var hashed = req.query.pwd
+		// const hashed = async () => {return await gethash(req.query.pwd)}
+		console.log('hashed pwd: ' + hashed)
+		if (hashed) {
+			var login = new Login()
+			login.user = req.query.user
+			// login.pwd = hashed
+			login.pwd = req.query.pwd
+			login.save(function(err, result) {
+			    if (err) {
+			        console.log(err)
+			        res.send(500,err)
+			    } else {
+			        console.log(login.user + ' ' + ' login saved to database')
+			        res.send(result)
+			    }
+			})
+		} else {
+			console.log('no hash')
+			res.send(500,'no hash')
+		}
+	} catch (err) {
+		console.error(err)
+	}
+}
+
+function gethash(pwd) {
+	bcrypt.hash(pwd, SALT_ROUNDS, function(err, hash) {
+		// console.log(hash)
+    	return hash
     })
 }
 
@@ -254,15 +342,16 @@ server.get('/applications', getApplications);
 server.get('/applications/:id', getApplicationById);
 server.get('/applications-search', getApplicationsByQuery);
 server.get('/getdeletedapplications', getdeletedApplications);
+server.get('/login', login);
+
 
 server.post('/applications', postApplication);
+server.post('/login', createLogin);
 
 server.del('/applications/:id', deleteApplicationById);
 
 server.put('/applications/:id', updateApplicationById);
 server.put('/undeleteapplication/:id', undeleteApplicationById)
-
-
 
 
 //include routes 
@@ -285,4 +374,3 @@ server.use(function(err, req, res, next) {
         error: {}
     });
 });
-

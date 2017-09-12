@@ -43,9 +43,9 @@ var loginSchema = new Schema({
     pwd: String,
     lastlogin: Date,
     isloggedin: Boolean,
-    isadmin: Boolean, 
-	isapplicant: Boolean,
-	isstudent: Boolean 
+    isadmin: Boolean,
+    isapplicant: Boolean,
+    isstudent: Boolean
 });
 
 
@@ -59,10 +59,13 @@ get '/applications'                      = get all
 get '/applications/:id'                  = get by id
 get '/applications-search?field=fvalue'  = get by search params
 get '/getdeletedapplications'            = get all deleted applications
-get '/login?user=xxx&pwd=yyy'            = get login and set lastlogindate
+
 
 post '/applications'                     = create a new application
-post '/login?user=xxx&pwd=yyy'           = login to secure section
+post '/login?user=xxx&pwd=yyy'           = login and set lastlogindate
+post '/createlogin?user=xxx&pwd=yyy'     = create login 
+    note: you can also add isstudent, isadmin, and isapplicant as parameters
+    defaults are isapplicant=true, isadmin=false, isstudent=false
 
 del '/applications/:id'                  = soft delete an application
 
@@ -318,9 +321,21 @@ function createLogin (req, res, next) {
 				var login = new Login()
 				login.user = req.query.user
 				login.pwd = hash
-				login.isadmin=false
-				login.isapplicant=true
-				login.isstudent=false
+                 if (typeof req.query.isadmin != 'undefined') {
+                    login.isadmin = req.query.isadmin
+                 } else {
+                    login.isadmin = false
+                 }
+				if (typeof req.query.isapplicant != 'undefined') {
+                    login.isapplicant = req.query.isapplicant
+                 } else {
+                    login.isapplicant = true
+                 }
+				if (typeof req.query.isstudent != 'undefined') {
+                    login.isstudent = req.query.isstudent
+                 } else {
+                    login.isstudent = false
+                 }
 				login.save(function(err, result) {
 				    if (err) {
 				        console.log(err)
@@ -340,28 +355,42 @@ function createLogin (req, res, next) {
 	})
 }
 
-function gethash(pwd) {
-	bcrypt.hash(pwd, SALT_ROUNDS, function(err, hash) {
-		// console.log(hash)
-    	return hash
+function logout(req, res, next) {
+    let username = req.params.user
+    Login.findOne({ "user": username}, function(err, user) {
+        if (err) {
+            console.log(err)
+            res.send(500,err)
+        } else {
+            user.isloggedin = false
+            user.save(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.send(500,err)
+                } else {
+                    console.log(username+ ' logged out')
+                    res.send(result)
+                }
+            })
+        }
     })
 }
 
 //routes
-server.get('/', getApplications);
-server.get('/applications', getApplications);
-server.get('/applications/:id', getApplicationById);
-server.get('/applications-search', getApplicationsByQuery);
-server.get('/getdeletedapplications', getdeletedApplications);
-server.get('/login', login);
-
+server.get('/', getApplications)
+server.get('/applications', getApplications)
+server.get('/applications/:id', getApplicationById)
+server.get('/applications-search', getApplicationsByQuery)
+server.get('/getdeletedapplications', getdeletedApplications)
 
 server.post('/applications', postApplication);
-server.post('/login', createLogin);
+server.post('/createlogin', createLogin)
+server.post('/login', login)
+server.post('/logout/:user', logout)
 
-server.del('/applications/:id', deleteApplicationById);
+server.del('/applications/:id', deleteApplicationById)
 
-server.put('/applications/:id', updateApplicationById);
+server.put('/applications/:id', updateApplicationById)
 server.put('/undeleteapplication/:id', undeleteApplicationById)
 
 
@@ -371,9 +400,9 @@ server.put('/undeleteapplication/:id', undeleteApplicationById)
 
 // catch 404 and forward to error handler
 server.use(function(req, res, next) {
-    let err = new Error('File Not Found');
-    err.status = 404;
-    next(err);
+    let err = new Error('File Not Found')
+    err.status = 404
+    next(err)
 });
 
 // error handler

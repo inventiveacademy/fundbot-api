@@ -41,7 +41,11 @@ var applicationSchema = new Schema({
 var loginSchema = new Schema({
     user: String,
     pwd: String,
-    lastlogin: Date
+    lastlogin: Date,
+    isloggedin: Boolean,
+    isadmin: Boolean, 
+	isapplicant: Boolean,
+	isstudent: Boolean 
 });
 
 
@@ -55,6 +59,7 @@ get '/applications'                      = get all
 get '/applications/:id'                  = get by id
 get '/applications-search?field=fvalue'  = get by search params
 get '/getdeletedapplications'            = get all deleted applications
+get '/login?user=xxx&pwd=yyy'            = get login and set lastlogindate
 
 post '/applications'                     = create a new application
 post '/login?user=xxx&pwd=yyy'           = login to secure section
@@ -271,62 +276,68 @@ function postApplication(req, res, next) {
 }
 
 function login(req, res, next) {
-    var hashed = gethash(req.query.pwd)
-    console.log('hashed pwd:' + hashed)
-    console.log("user: " + req.query.user + " pwd: " + req.query.pwd)
-
-    Login.findOne({ "user": req.query.user, "pwd": req.query.pwd }, function(err, user) {
-        if (err) {
-            console.log(err)
-            res.send(500,err)
-        } else {
-            if (!user) {
-                res.send(401,"login failed")
-            } else {
-                var hour = 3600000
-                req.session.cookie.expires = new Date(Date.now() + hour)
-                req.session.user = user.user
-                req.session.loggedin = true
-                user.lastlogin = new Date()
-	            user.save()
-                
-                console.log(user.user + ' logged in')
-                res.send("login success")
-            }
-        }
-        return next();
-    })
+	bcrypt.hash(req.query.pwd,SALT_ROUNDS,function(err, hash){
+		console.log("user: " + req.query.user + " pwd: " + req.query.pwd + " hash: "+hash)
+		
+	    Login.findOne({ "user": req.query.user}, function(err, user) {
+	        if (err) {
+	            console.log(err)
+	            res.send(500,err)
+	        } else {
+	            if (!user) {
+	                res.send(401,"User Not Found")
+	            } else {
+	            	bcrypt.compare(req.query.pwd, hash, function(err, tf) {
+					    if (tf) {
+						
+			                var hour = 3600000
+			                req.session.cookie.expires = new Date(Date.now() + hour)
+			                req.session.user = user.user
+			                req.session.loggedin = true
+			                user.lastlogin = new Date()
+			                user.isloggedin = true
+				            user.save()
+			                
+			                console.log(user.user + ' logged in')
+			                res.send(user.user+" login success")
+			            }
+		        	})
+	            }
+	        }
+	        return next();
+	    })
+	})
 }
 
 
-async function createLogin (req, res, next) {
-	console.log(req.query.pwd)
-	try {
-		// var hashed = await gethash(req.query.pwd)
-		var hashed = req.query.pwd
-		// const hashed = async () => {return await gethash(req.query.pwd)}
-		console.log('hashed pwd: ' + hashed)
-		if (hashed) {
-			var login = new Login()
-			login.user = req.query.user
-			// login.pwd = hashed
-			login.pwd = req.query.pwd
-			login.save(function(err, result) {
-			    if (err) {
-			        console.log(err)
-			        res.send(500,err)
-			    } else {
-			        console.log(login.user + ' ' + ' login saved to database')
-			        res.send(result)
-			    }
-			})
-		} else {
-			console.log('no hash')
-			res.send(500,'no hash')
+function createLogin (req, res, next) {
+	bcrypt.hash(req.query.pwd,SALT_ROUNDS,function(err, hash){
+		try {
+			console.log('hashed pwd: ' + hash)
+			if (hash) {
+				var login = new Login()
+				login.user = req.query.user
+				login.pwd = hash
+				login.isadmin=false
+				login.isapplicant=true
+				login.isstudent=false
+				login.save(function(err, result) {
+				    if (err) {
+				        console.log(err)
+				        res.send(500,err)
+				    } else {
+				        console.log(login.user + ' ' + ' login saved to database')
+				        res.send(result)
+				    }
+				})
+			} else {
+				console.log('no hash')
+				res.send(500,'no hash')
+			}
+		} catch (err) {
+			console.error(err)
 		}
-	} catch (err) {
-		console.error(err)
-	}
+	})
 }
 
 function gethash(pwd) {

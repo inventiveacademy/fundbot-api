@@ -1,9 +1,7 @@
 // mongoose 4.3.x
 var mongoose = require('mongoose')
 var restify = require('restify')
-var session = require('express-session')
 var cookieParser = require('cookie-parser')
-var mongoStore = require('connect-mongo')(session)
 var bodyParser = require('body-parser')
 var queryParser = require('query-parser')
 var bcrypt = require('bcrypt');
@@ -92,15 +90,6 @@ ${exposedRoutes}`);
     })
 });
 
-server.use(session({
-    resave: true,
-    saveUninitialized: true,
-    secret: secret,
-    store: new mongoStore({
-        mongooseConnection: db,
-        collection: 'sessions' // default
-    })
-}));
 
 function formatNow() {
     var pad = function(n) { return n < 10 ? "0" + n : n; };
@@ -293,16 +282,12 @@ function login(req, res, next) {
 	            	bcrypt.compare(req.query.pwd, hash, function(err, tf) {
 					    if (tf) {
 						
-			                var hour = 3600000
-			                req.session.cookie.expires = new Date(Date.now() + hour)
-			                req.session.user = user.user
-			                req.session.loggedin = true
 			                user.lastlogin = new Date()
 			                user.isloggedin = true
 				            user.save()
 			                
 			                console.log(user.user + ' logged in')
-			                res.send(user.user+" login success")
+			                res.send(user)
 			            }
 		        	})
 	            }
@@ -311,7 +296,6 @@ function login(req, res, next) {
 	    })
 	})
 }
-
 
 function createLogin (req, res, next) {
 	bcrypt.hash(req.query.pwd,SALT_ROUNDS,function(err, hash){

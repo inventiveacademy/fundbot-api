@@ -80,6 +80,7 @@ del '/applications/:id'                  = soft delete an application
 
 put '/applications/:id'                  = update by id
 put '/undeleteapplication/:id'           = undelete by id
+put '/approveapplication/:id'            = approve application
 ======================================================================`
 
 
@@ -350,6 +351,63 @@ function createLogin (req, res, next) {
 	})
 }
 
+// function updateUser(req, res, next) {
+//     let user = req.params.user
+//     console.log("update: " + user)
+//     Login.findOne({ "user": user}, function(err, login) {
+//         if (err) {
+//             console.log(err)
+//             res.send(500,err)
+//         } else {
+//             //console.log(applications)
+//             var date = new Date()
+
+
+//             pwd: String,
+//             lastlogin: Date,
+//             isloggedin: Boolean,
+//             isstudent: Boolean,
+//             isadmin: {
+//                 type: Boolean,
+//                 default: false
+//             },
+//             isapplicant: {
+//                 type: Boolean,
+//                 default: true
+//             },
+//             isuser: {
+//                 type: Boolean,
+//                 default: false
+//             }
+
+//             applications.firstname = req.body.firstname
+//             applications.middlename = req.body.middlename
+//             applications.lastname = req.body.lastname
+//             applications.email = req.body.email
+//             applications.contactphone = req.body.contactphone
+//             applications.address = req.body.address
+//             applications.zip = req.body.zip
+//             applications.city = req.body.city
+//             applications.state = req.body.state
+//             // applications.applicationstate = req.body.applicationstate
+//             // applications.createdate = req.body.createdate
+//             applications.modifydate = date
+//             applications.isdeleted = false
+
+//             applications.save(function(err, result) {
+//                 if (err) {
+//                     console.log(err)
+//                     res.send(500,err)
+//                 } else {
+//                     console.log(applications.id + ' updated')
+//                     res.send(result)
+//                 }
+//             })
+//         }
+//     })
+// }
+
+
 function logout(req, res, next) {
     let username = req.params.user
     Login.findOne({ "user": username}, function(err, user) {
@@ -371,6 +429,46 @@ function logout(req, res, next) {
     })
 }
 
+function approveApplicationById(req, res, next) {
+    let id = req.params.id
+    console.log("undelete: " + id)
+    Application.findById(id, function(err, applications) {
+        if (err) {
+            console.log(err)
+            res.send(500,err)
+        } else {
+            if ('application, validation'.indexOf(applications.applicationstate)>=0) {
+                applications.applicationstate = 'approved'
+                applications.save(function(err, result) {
+                    if (err) {
+                        console.log(err)
+                        res.send(500,err)
+                    } else {
+                        console.log('applicationstate =' + ' approved')
+                        res.send(result)
+                    }
+                })
+            } else {
+                console.log('appliationstate not valid for approval: '+applications.applicationstate)
+                res.send(500,'appliationstate not valid for approval: '+applications.applicationstate)
+            }
+        }
+    })
+}
+
+// application states
+// application
+// validation
+// approved
+// funding
+// closing
+// dispersal
+// grace_period
+// payment
+// collections
+// sold
+// closed
+
 //routes
 server.get('/', getApplications)
 server.get('/applications', getApplications)
@@ -387,7 +485,7 @@ server.del('/applications/:id', deleteApplicationById)
 
 server.put('/applications/:id', updateApplicationById)
 server.put('/undeleteapplication/:id', undeleteApplicationById)
-
+server.put('/approveapplication/:id',approveApplicationById)
 
 //include routes
 // let routes = require('./routes/index');

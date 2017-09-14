@@ -1,4 +1,5 @@
 // mongoose 4.3.x
+// Scottie and trin pull request trainig
 var mongoose = require('mongoose')
 var restify = require('restify')
 var session = require('express-session')
@@ -63,7 +64,7 @@ get '/getdeletedapplications'            = get all deleted applications
 
 post '/applications'                     = create a new application
 post '/login?user=xxx&pwd=yyy'           = login and set lastlogindate
-post '/createlogin?user=xxx&pwd=yyy'     = create login 
+post '/createlogin?user=xxx&pwd=yyy'     = create login
     note: you can also add isstudent, isadmin, and isapplicant as parameters
     defaults are isapplicant=true, isadmin=false, isstudent=false
 
@@ -83,7 +84,7 @@ let db = mongoose.connection;
 //mongo error
 db.on('error', console.error.bind(console, 'connection error:'));
 
-// Wait for the database connection to establish, then start the app.   
+// Wait for the database connection to establish, then start the app.
 db.once('open', function() {
     var port = 3008
     server.listen(port, function() {
@@ -281,7 +282,7 @@ function postApplication(req, res, next) {
 function login(req, res, next) {
 	bcrypt.hash(req.query.pwd,SALT_ROUNDS,function(err, hash){
 		console.log("user: " + req.query.user + " pwd: " + req.query.pwd + " hash: "+hash)
-		
+
 	    Login.findOne({ "user": req.query.user}, function(err, user) {
 	        if (err) {
 	            console.log(err)
@@ -292,7 +293,7 @@ function login(req, res, next) {
 	            } else {
 	            	bcrypt.compare(req.query.pwd, hash, function(err, tf) {
 					    if (tf) {
-						
+
 			                var hour = 3600000
 			                req.session.cookie.expires = new Date(Date.now() + hour)
 			                req.session.user = user.user
@@ -300,7 +301,7 @@ function login(req, res, next) {
 			                user.lastlogin = new Date()
 			                user.isloggedin = true
 				            user.save()
-			                
+
 			                console.log(user.user + ' logged in')
 			                res.send(user.user+" login success")
 			            }
@@ -394,7 +395,7 @@ server.put('/applications/:id', updateApplicationById)
 server.put('/undeleteapplication/:id', undeleteApplicationById)
 
 
-//include routes 
+//include routes
 // let routes = require('./routes/index');
 // server.use('/', routes);
 

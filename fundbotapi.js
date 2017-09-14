@@ -9,11 +9,26 @@ var queryParser = require('query-parser')
 var bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10;
 var server = restify.createServer()
+var api_key= 'key-6936814213c65cf51b76d57a39587665';
+var domain ='sandbox33b68518692b4762acf3495d8ced30ac.mailgun.org';
+var mailgun = require('mailgun-js')({apiKey: api_key, domain: domain});
 
 server.name = 'FundBot API'
 
 server.use(restify.plugins.bodyParser());
 server.use(restify.plugins.queryParser());
+
+//Password email reset- Testing
+var data = {
+    from: 'Shalay<smashford12@gmail.com>',
+    to: 'smashford12@gmail.com',
+    subject: 'Hello! Is this working?',
+    text: 'You is Beautiful, You is Smart, You is Important'
+};
+
+mailgun.messages().send(data, function (error, body) {
+    console.log(body);
+});
 
 // attach the session manager
 

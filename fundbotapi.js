@@ -48,6 +48,8 @@ var applicationSchema = new Schema({
     zip: String,
     city: String,
     state: String,
+    nationality: String,
+    ssn: String,
     applicationstate: String,
     createdate: Date,
     modifydate: Date,
@@ -194,15 +196,17 @@ function updateApplicationById(req, res, next) {
             //console.log(applications)
             var date = new Date()
 
-            applications.firstname = req.body.firstname
-            applications.middlename = req.body.middlename
-            applications.lastname = req.body.lastname
-            applications.email = req.body.email
-            applications.contactphone = req.body.contactphone
-            applications.address = req.body.address
-            applications.zip = req.body.zip
-            applications.city = req.body.city
-            applications.state = req.body.state
+            if (req.body.firstname) applications.firstname = req.body.firstname
+            if (req.body.middlename) applications.middlename = req.body.middlename
+            if (req.body.lastname) applications.lastname = req.body.lastname
+            if (req.body.email) applications.email = req.body.email
+            if (req.body.contactphone) applications.contactphone = req.body.contactphone
+            if (req.body.address) applications.address = req.body.address
+            if (req.body.zip) applications.zip = req.body.zip
+            if (req.body.city) applications.city = req.body.city
+            if (req.body.state) applications.state = req.body.state
+            if (req.body.nationality) applications.nationality = req.body.nationality
+            if (req.body.ssn) applications.ssn = req.body.ssn
             // applications.applicationstate = req.body.applicationstate
             // applications.createdate = req.body.createdate
             applications.modifydate = date
@@ -310,7 +314,6 @@ function login(req, res, next) {
 	            } else {
 	            	bcrypt.compare(req.query.pwd, hash, function(err, tf) {
 					    if (tf) {
-
 
 			                user.lastlogin = new Date()
 			                user.isloggedin = true

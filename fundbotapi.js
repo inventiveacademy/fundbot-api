@@ -207,10 +207,10 @@ function updateApplicationById(req, res, next) {
             if (req.body.state) applications.state = req.body.state
             if (req.body.nationality) applications.nationality = req.body.nationality
             if (req.body.ssn) applications.ssn = req.body.ssn
-            // applications.applicationstate = req.body.applicationstate
+            // applications.applicationstate = req.body.applicationstate // modified elsewere
             // applications.createdate = req.body.createdate
+            if (applications.isdeleted) applications.isdeleted = false
             applications.modifydate = date
-            applications.isdeleted = false
 
             applications.save(function(err, result) {
                 if (err) {

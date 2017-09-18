@@ -19,17 +19,6 @@ server.name = 'FundBot API'
 server.use(restify.plugins.bodyParser());
 server.use(restify.plugins.queryParser());
 
-// //Password email reset- Testing
-// var data = {
-//     from: 'Shalay<smashford12@gmail.com>',
-//     to: 'smashford12@gmail.com',
-//     subject: 'Hello! Is this working?',
-//     text: 'You is Beautiful, You is Smart, You is Important'
-// };
-
-// mailgun.messages().send(data, function (error, body) {
-//     console.log(body);
-// });
 
 // attach the session manager
 
@@ -94,6 +83,7 @@ post '/login?user=xxx&pwd=yyy'           = login and set lastlogindate
 post '/createlogin?user=xxx&pwd=yyy'     = create login
     note: you can also add isstudent, isadmin, and isapplicant as parameters
     defaults are isapplicant=true, isadmin=false, isstudent=false
+post '/sendemail'                        = send email use JSONobject
 
 del '/applications/:id'                  = soft delete an application
 
@@ -121,6 +111,47 @@ ${exposedRoutes}`);
     })
 });
 
+function isJson(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+}
+
+function sendemail (req, res, next) {
+//Password email reset- Testing
+    
+    // var data = {
+    //     from: 'Shalay<smashford12@gmail.com>',
+    //     to: 'rcrutherford@gmail.com',
+    //     subject: 'Hello! Is this working?',
+    //     text: 'You is Beautiful, You is Smart, You is Important'
+    // };
+    var data = req.body
+
+    mailgun.messages().send(data, function (error, body) {
+        if (error) {
+            console.log(error)
+            res.send(500,error)
+        } else {
+            console.log(data)
+            res.send(200)
+        }
+    })
+
+    // if (isJson(data)) {
+    //     mailgun.messages().send(data, function (error, body) {
+    //         console.log(body)
+    //     })
+    // } else {
+    //     data = JSON.parse(data)
+    //     mailgun.messages().send(data, function (error, body) {
+    //         console.log(body)
+    //     })
+    // }
+}
 
 function formatNow() {
     var pad = function(n) { return n < 10 ? "0" + n : n; };
@@ -501,6 +532,7 @@ server.post('/applications', postApplication);
 server.post('/createlogin', createLogin)
 server.post('/login', login)
 server.post('/logout/:user', logout)
+server.post('/sendemail',sendemail)
 
 server.del('/applications/:id', deleteApplicationById)
 

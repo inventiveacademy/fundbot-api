@@ -130,7 +130,6 @@ function isJson(str) {
 
 function sendemail (req, res, next) {
 //Password email reset- Testing
-    
     console.log(req.body);
      var data = {
          from: 'Shalay<smashford12@gmail.com>',

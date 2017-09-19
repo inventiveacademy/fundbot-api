@@ -131,13 +131,13 @@ function isJson(str) {
 function sendemail (req, res, next) {
 //Password email reset- Testing
     
-    // var data = {
-    //     from: 'Shalay<smashford12@gmail.com>',
-    //     to: 'rcrutherford@gmail.com',
-    //     subject: 'Hello! Is this working?',
-    //     text: 'You is Beautiful, You is Smart, You is Important'
-    // };
-    var data = req.body
+    console.log(req.body);
+     var data = {
+         from: 'Shalay<smashford12@gmail.com>',
+         to: 'smashford12@gmail.com',
+         subject: 'Hello! Is this working?',
+         text: 'You is Kind, You is Smart, You is Important'
+     };
 
     mailgun.messages().send(data, function (error, body) {
         if (error) {

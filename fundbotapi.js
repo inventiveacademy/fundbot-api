@@ -76,14 +76,22 @@ get '/applications'                      = get all
 get '/applications/:id'                  = get by id
 get '/applications-search?field=fvalue'  = get by search params
 get '/getdeletedapplications'            = get all deleted applications
+get '/logout/:user"                      = logout user                                            
 
 
 post '/applications'                     = create a new application
-post '/login?user=xxx&pwd=yyy'           = login and set lastlogindate
-post '/createlogin?user=xxx&pwd=yyy'     = create login
-    note: you can also add isstudent, isadmin, and isapplicant as parameters
-    defaults are isapplicant=true, isadmin=false, isstudent=false
+post '/login'                            = login and set lastlogindate send JSON 
+                                           {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
+post '/createlogin                       = create login send JSON 
+                                           {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
 post '/sendemail'                        = send email use JSONobject
+                                            {
+                                                from: 'Shalay<smashford12@gmail.com>',
+                                                to: 'rcrutherford@gmail.com',
+                                                subject: 'Hello! Is this working?',
+                                                text: 'You is Beautiful, You is Smart, You is Important'
+                                            }
+
 
 del '/applications/:id'                  = soft delete an application
 
@@ -140,17 +148,16 @@ function sendemail (req, res, next) {
             res.send(200)
         }
     })
+}
 
-    // if (isJson(data)) {
-    //     mailgun.messages().send(data, function (error, body) {
-    //         console.log(body)
-    //     })
-    // } else {
-    //     data = JSON.parse(data)
-    //     mailgun.messages().send(data, function (error, body) {
-    //         console.log(body)
-    //     })
-    // }
+function generatePassword() {
+    var length = 8,
+        charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        retVal = "";
+    for (var i = 0, n = charset.length; i < length; ++i) {
+        retVal += charset.charAt(Math.floor(Math.random() * n));
+    }
+    return retVal;
 }
 
 function formatNow() {
@@ -332,10 +339,10 @@ function postApplication(req, res, next) {
 }
 
 function login(req, res, next) {
-	bcrypt.hash(req.query.pwd,SALT_ROUNDS,function(err, hash){
-		console.log("user: " + req.query.user + " pwd: " + req.query.pwd + " hash: "+hash)
+	bcrypt.hash(req.body.pwd,SALT_ROUNDS,function(err, hash){
+		console.log("user: " + req.body.user + " pwd: " + req.body.pwd + " hash: "+hash)
 
-	    Login.findOne({ "user": req.query.user}, function(err, user) {
+	    Login.findOne({ "user": req.body.user}, function(err, user) {
 	        if (err) {
 	            console.log(err)
 	            res.send(500,err)
@@ -343,7 +350,7 @@ function login(req, res, next) {
 	            if (!user) {
 	                res.send(401,"User Not Found")
 	            } else {
-	            	bcrypt.compare(req.query.pwd, hash, function(err, tf) {
+	            	bcrypt.compare(req.body.pwd, hash, function(err, tf) {
 					    if (tf) {
 
 			                user.lastlogin = new Date()
@@ -362,25 +369,25 @@ function login(req, res, next) {
 }
 
 function createLogin (req, res, next) {
-	bcrypt.hash(req.query.pwd,SALT_ROUNDS,function(err, hash){
+	bcrypt.hash(req.body.pwd,SALT_ROUNDS,function(err, hash){
 		try {
 			console.log('hashed pwd: ' + hash)
 			if (hash) {
 				var login = new Login()
-				login.user = req.query.user
+				login.user = req.body.user
 				login.pwd = hash
-                 if (typeof req.query.isadmin != 'undefined') {
-                    login.isadmin = req.query.isadmin
+                 if (typeof req.body.isadmin != 'undefined') {
+                    login.isadmin = req.body.isadmin
                  } else {
                     login.isadmin = false
                  }
-				if (typeof req.query.isapplicant != 'undefined') {
-                    login.isapplicant = req.query.isapplicant
+				if (typeof req.body.isapplicant != 'undefined') {
+                    login.isapplicant = req.body.isapplicant
                  } else {
                     login.isapplicant = true
                  }
-				if (typeof req.query.isstudent != 'undefined') {
-                    login.isstudent = req.query.isstudent
+				if (typeof req.body.isstudent != 'undefined') {
+                    login.isstudent = req.body.isstudent
                  } else {
                     login.isstudent = false
                  }
@@ -483,7 +490,7 @@ function logout(req, res, next) {
 
 function approveApplicationById(req, res, next) {
     let id = req.params.id
-    console.log("undelete: " + id)
+    console.log("approve: " + id)
     Application.findById(id, function(err, applications) {
         if (err) {
             console.log(err)
@@ -497,7 +504,10 @@ function approveApplicationById(req, res, next) {
                         res.send(500,err)
                     } else {
                         console.log('applicationstate =' + ' approved')
-                        res.send(result)
+                        var pwd = generatePassword()
+                        // var userreq = {"user":applications.email, "pwd":pwd}
+                        // createLogin(userreq,{})
+                        
                     }
                 })
             } else {
@@ -527,11 +537,11 @@ server.get('/applications', getApplications)
 server.get('/applications/:id', getApplicationById)
 server.get('/applications-search', getApplicationsByQuery)
 server.get('/getdeletedapplications', getdeletedApplications)
+server.get('/logout/:user', logout)
 
 server.post('/applications', postApplication);
 server.post('/createlogin', createLogin)
 server.post('/login', login)
-server.post('/logout/:user', logout)
 server.post('/sendemail',sendemail)
 
 server.del('/applications/:id', deleteApplicationById)

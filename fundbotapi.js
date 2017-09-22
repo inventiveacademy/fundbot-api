@@ -483,10 +483,10 @@ function approveApplicationById(req, res, next) {
                                     login.user = applications.email
 
                                     login.pwd = hash
-                                    login.save(function(err2, result2) {
-                                        if (err) {
-                                            console.log(err2)
-                                            res.send(500, err2)
+                                    login.save(function(loginsaveerr, loginsaveresult) {
+                                        if (loginsaveerr) {
+                                            console.log(loginsaveerr)
+                                            res.send(500, loginsaveerr)
                                         } else {
                                             console.log(login.user + ' ' + ' login saved to database')
                                             var data = {

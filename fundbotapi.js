@@ -8,11 +8,10 @@ var queryParser = require('query-parser')
 var bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10;
 var server = restify.createServer()
-
 // mailgun stuff
-var api_key= 'key-6936814213c65cf51b76d57a39587665';
-var domain ='sandbox33b68518692b4762acf3495d8ced30ac.mailgun.org';
-var mailgun = require('mailgun-js')({apiKey: api_key, domain: domain});
+var api_key = 'key-6936814213c65cf51b76d57a39587665';
+var domain = 'sandbox33b68518692b4762acf3495d8ced30ac.mailgun.org';
+var mailgun = require('mailgun-js')({ apiKey: api_key, domain: domain });
 
 server.name = 'FundBot API'
 
@@ -62,7 +61,10 @@ var loginSchema = new Schema({
     isuser: {
         type: Boolean,
         default: false
-    }
+    },
+    firstname: String,
+    lastname: String,
+    email: String
 });
 
 
@@ -78,20 +80,17 @@ get '/applications-search?field=fvalue'  = get by search params
 get '/getdeletedapplications'            = get all deleted applications
 get '/logout/:user"                      = logout user                                            
 
-
 post '/applications'                     = create a new application
 post '/login'                            = login and set lastlogindate send JSON 
                                            {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
 post '/createlogin                       = create login send JSON 
                                            {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
 post '/sendemail'                        = send email use JSONobject
-                                            {
-                                                from: 'Shalay<smashford12@gmail.com>',
+                                            {   from: 'Shalay<smashford12@gmail.com>',
                                                 to: 'rcrutherford@gmail.com',
                                                 subject: 'Hello! Is this working?',
-                                                text: 'You is Beautiful, You is Smart, You is Important'
+                                                text: 'You is Beautiful, You is Smart, You is Important' 
                                             }
-
 
 del '/applications/:id'                  = soft delete an application
 
@@ -128,36 +127,27 @@ function isJson(str) {
     return true;
 }
 
-function sendemail (req, res, next) {
-//Password email reset- Testing
-    
-    // var data = {
-    //     from: 'Shalay<smashford12@gmail.com>',
-    //     to: 'rcrutherford@gmail.com',
-    //     subject: 'Hello! Is this working?',
-    //     text: 'You is Beautiful, You is Smart, You is Important'
-    // };
-    var data = req.body
-
-    mailgun.messages().send(data, function (error, body) {
-        if (error) {
-            console.log(error)
-            res.send(500,error)
-        } else {
-            console.log(data)
-            res.send(200)
-        }
+function sendemail(data) {
+    mailgun.messages().send(data).then(function(body) {
+        console.log('success: '+JSON.stringify(body))
+        // res.send(200, 'mail sent')
+        return(body)
+    }).catch(function(err) {
+        console.log('sendemail: '+err)
+        // res.send(500, err)
+        return(err)
     })
 }
 
-function generatePassword() {
-    var length = 8,
-        charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-        retVal = "";
-    for (var i = 0, n = charset.length; i < length; ++i) {
-        retVal += charset.charAt(Math.floor(Math.random() * n));
-    }
-    return retVal;
+async function sendemailroute(req, res, next) {
+    var data = req.body
+    mailgun.messages().send(data).then(function(body) {
+        console.log('success: '+JSON.stringify(body))
+        res.send(200, 'mail sent')
+    }).catch(function(err) {
+        console.log('sendemail: '+err)
+        res.send(500, err)
+    })
 }
 
 function formatNow() {
@@ -176,7 +166,7 @@ function getApplications(req, res, next) {
     Application.find({ "isdeleted": false }, function(err, applications) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
             //console.log(applications)
             res.send(applications)
@@ -190,7 +180,7 @@ function getApplicationById(req, res, next) {
     Application.findOne({ "isdeleted": false, "_id": id }, function(err, applications) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else res.send(applications)
     })
 }
@@ -200,7 +190,7 @@ function getdeletedApplications(req, res, next) {
     Application.find({ "isdeleted": true }, function(err, applications) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
             //console.log(applications)
             res.send(applications)
@@ -215,7 +205,7 @@ function getApplicationsByQuery(req, res, next) {
     Application.find(query, function(err, applications) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
             //console.log(applications)
             res.send(applications)
@@ -229,7 +219,7 @@ function updateApplicationById(req, res, next) {
     Application.findById(id, function(err, applications) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
             //console.log(applications)
             var date = new Date()
@@ -253,7 +243,7 @@ function updateApplicationById(req, res, next) {
             applications.save(function(err, result) {
                 if (err) {
                     console.log(err)
-                    res.send(500,err)
+                    res.send(500, err)
                 } else {
                     console.log(applications.id + ' updated')
                     res.send(result)
@@ -269,13 +259,13 @@ function deleteApplicationById(req, res, next) {
     Application.findById(id, function(err, applications) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
             applications.isdeleted = true
             applications.save(function(err, result) {
                 if (err) {
                     console.log(err)
-                    res.send(500,err)
+                    res.send(500, err)
                 } else {
                     console.log(applications.id + ' soft deleted')
                     res.send(result)
@@ -291,13 +281,13 @@ function undeleteApplicationById(req, res, next) {
     Application.findById(id, function(err, applications) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
             applications.isdeleted = false
             applications.save(function(err, result) {
                 if (err) {
                     console.log(err)
-                    res.send(500,err)
+                    res.send(500, err)
                 } else {
                     console.log(applications.id + ' un-deleted')
                     res.send(result)
@@ -330,7 +320,7 @@ function postApplication(req, res, next) {
     application.save(function(err, result) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
             console.log(application.firstname + ' ' + application.lastname + ' saved to database')
             res.send(result)
@@ -339,148 +329,112 @@ function postApplication(req, res, next) {
 }
 
 function login(req, res, next) {
-	bcrypt.hash(req.body.pwd,SALT_ROUNDS,function(err, hash){
-		console.log("user: " + req.body.user + " pwd: " + req.body.pwd + " hash: "+hash)
+    bcrypt.hash(req.body.pwd, SALT_ROUNDS, function(err, hash) {
+        console.log("user: " + req.body.user + " pwd: " + req.body.pwd + " hash: " + hash)
 
-	    Login.findOne({ "user": req.body.user}, function(err, user) {
-	        if (err) {
-	            console.log(err)
-	            res.send(500,err)
-	        } else {
-	            if (!user) {
-	                res.send(401,"User Not Found")
-	            } else {
-	            	bcrypt.compare(req.body.pwd, hash, function(err, tf) {
-					    if (tf) {
+        Login.findOne({ "user": req.body.user }, function(err, user) {
+            if (err) {
+                console.log(err)
+                res.send(500, err)
+            } else {
+                if (!user) {
+                    res.send(401, "User Not Found")
+                } else {
+                    bcrypt.compare(req.body.pwd, hash, function(err, tf) {
+                        if (tf) {
 
-			                user.lastlogin = new Date()
-			                user.isloggedin = true
-				            user.save()
+                            user.lastlogin = new Date()
+                            user.isloggedin = true
+                            user.save()
 
-			                console.log(user.user + ' logged in')
-			                res.send(user)
-			            }
-		        	})
-	            }
-	        }
-	        return next();
-	    })
-	})
+                            console.log(user.user + ' logged in')
+                            res.send(user)
+                        }
+                    })
+                }
+            }
+            return next();
+        })
+    })
 }
 
-function createLogin (req, res, next) {
-	bcrypt.hash(req.body.pwd,SALT_ROUNDS,function(err, hash){
-		try {
-			console.log('hashed pwd: ' + hash)
-			if (hash) {
-				var login = new Login()
-				login.user = req.body.user
-				login.pwd = hash
-                 if (typeof req.body.isadmin != 'undefined') {
-                    login.isadmin = req.body.isadmin
-                 } else {
-                    login.isadmin = false
-                 }
-				if (typeof req.body.isapplicant != 'undefined') {
-                    login.isapplicant = req.body.isapplicant
-                 } else {
-                    login.isapplicant = true
-                 }
-				if (typeof req.body.isstudent != 'undefined') {
-                    login.isstudent = req.body.isstudent
-                 } else {
-                    login.isstudent = false
-                 }
-				login.save(function(err, result) {
-				    if (err) {
-				        console.log(err)
-				        res.send(500,err)
-				    } else {
-				        console.log(login.user + ' ' + ' login saved to database')
-				        res.send(result)
-				    }
-				})
-			} else {
-				console.log('no hash')
-				res.send(500,'no hash')
-			}
-		} catch (err) {
-			console.error(err)
-		}
-	})
+  
+function createLogin (json) {
+    return new Promise(function (resolve, reject) {
+        bcrypt.hash(json.pwd, SALT_ROUNDS, function(err, hash) {
+            try {
+                console.log('hashed pwd: ' + hash)
+                if (hash) {
+                    var login = new Login()
+                    login.user = json.user
+                    login.pwd = hash
+                    if (typeof json.isadmin != 'undefined') {
+                        login.isadmin = json.isadmin
+                    } else {
+                        login.isadmin = false
+                    }
+                    if (typeof json.isapplicant != 'undefined') {
+                        login.isapplicant = json.isapplicant
+                    } else {
+                        login.isapplicant = true
+                    }
+                    if (typeof json.isuser != 'undefined') {
+                        login.isuser = json.isuser
+                    } else {
+                        login.isuser = false
+                    }
+                    login.save(function(err1, result) {
+                        if (err) {
+                            console.log(err1)
+                            reject(err1)
+                        } else {
+                            console.log(login.user + ' ' + ' login saved to database')
+                            var data = {
+                                from: 'fundbot@inventive.io',
+                                to: login.user,
+                                subject: 'Your FUNDBOT new user info',
+                                text: `login = your email, password = ${json.pwd}  Please change your password after you login the 1st time.  Thanks!`
+                            }
+                            sendemail(data)
+                            resolve(result)
+                        }
+                    })
+                } else {
+                    console.log('no password hash')
+                    reject('no password hash')
+                }
+            } catch (err2) {
+                console.error(err2)
+                reject(err)
+            }
+        })
+    })
 }
 
-// function updateUser(req, res, next) {
-//     let user = req.params.user
-//     console.log("update: " + user)
-//     Login.findOne({ "user": user}, function(err, login) {
-//         if (err) {
-//             console.log(err)
-//             res.send(500,err)
-//         } else {
-//             //console.log(applications)
-//             var date = new Date()
-
-
-//             pwd: String,
-//             lastlogin: Date,
-//             isloggedin: Boolean,
-//             isstudent: Boolean,
-//             isadmin: {
-//                 type: Boolean,
-//                 default: false
-//             },
-//             isapplicant: {
-//                 type: Boolean,
-//                 default: true
-//             },
-//             isuser: {
-//                 type: Boolean,
-//                 default: false
-//             }
-
-//             applications.firstname = req.body.firstname
-//             applications.middlename = req.body.middlename
-//             applications.lastname = req.body.lastname
-//             applications.email = req.body.email
-//             applications.contactphone = req.body.contactphone
-//             applications.address = req.body.address
-//             applications.zip = req.body.zip
-//             applications.city = req.body.city
-//             applications.state = req.body.state
-//             // applications.applicationstate = req.body.applicationstate
-//             // applications.createdate = req.body.createdate
-//             applications.modifydate = date
-//             applications.isdeleted = false
-
-//             applications.save(function(err, result) {
-//                 if (err) {
-//                     console.log(err)
-//                     res.send(500,err)
-//                 } else {
-//                     console.log(applications.id + ' updated')
-//                     res.send(result)
-//                 }
-//             })
-//         }
-//     })
-// }
-
+async function callCreateLogin(req, res, next) {
+    var login = await createLogin(req.body).then(function(body) {
+        console.log('success: '+JSON.stringify(body))
+        res.send(200, body)
+    }).catch(function(err) {
+        console.log('sendemail: '+err)
+        res.send(500, err)
+    })
+}
 
 function logout(req, res, next) {
     let username = req.params.user
-    Login.findOne({ "user": username}, function(err, user) {
+    Login.findOne({ "user": username }, function(err, user) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
             user.isloggedin = false
             user.save(function(err, result) {
                 if (err) {
                     console.log(err)
-                    res.send(500,err)
+                    res.send(500, err)
                 } else {
-                    console.log(username+ ' logged out')
+                    console.log(username + ' logged out')
                     res.send(result)
                 }
             })
@@ -488,31 +442,74 @@ function logout(req, res, next) {
     })
 }
 
+function generateTempPassword() {
+    var length = 8,
+        charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        retVal = "";
+    for (var i = 0, n = charset.length; i < length; ++i) {
+        retVal += charset.charAt(Math.floor(Math.random() * n));
+    }
+    return retVal;
+}
+
 function approveApplicationById(req, res, next) {
+    const getPasswordAsPromise = new Promise(function(resolve, reject) {
+        var pwd = generateTempPassword()
+        if (!pwd) {
+            reject(Error("broken Password Promise"))
+        } else {
+            resolve(pwd)
+        }
+    })
+
     let id = req.params.id
     console.log("approve: " + id)
     Application.findById(id, function(err, applications) {
         if (err) {
             console.log(err)
-            res.send(500,err)
+            res.send(500, err)
         } else {
-            if ('application, validation'.indexOf(applications.applicationstate)>=0) {
+            if ('application, validation'.indexOf(applications.applicationstate) >= 0) {
                 applications.applicationstate = 'approved'
                 applications.save(function(err, result) {
                     if (err) {
                         console.log(err)
-                        res.send(500,err)
+                        res.send(500, err)
                     } else {
-                        console.log('applicationstate =' + ' approved')
-                        var pwd = generatePassword()
-                        // var userreq = {"user":applications.email, "pwd":pwd}
-                        // createLogin(userreq,{})
-                        
+                        getPasswordAsPromise.then(function(result) {
+                            bcrypt.hash(result, SALT_ROUNDS,
+                                function(err, hash) {
+                                    var login = new Login()
+                                    login.user = applications.email
+
+                                    login.pwd = hash
+                                    login.save(function(err2, result2) {
+                                        if (err) {
+                                            console.log(err2)
+                                            res.send(500, err2)
+                                        } else {
+                                            console.log(login.user + ' ' + ' login saved to database')
+                                            var data = {
+                                                from: 'fundbot@inventive.io',
+                                                to: login.user,
+                                                subject: 'Your FUNDBOT new user info',
+                                                text: `login = your email, password = ${result}  Please change your password after you login the 1st time.  Thanks!`
+                                            }
+                                            sendemail(data)
+                                        }
+                                    })
+                                },
+                                function(err1) {
+                                    console.log('getPasswordAsPromise error: ' + err1)
+                                }
+                            )
+                        })
+                        res.send('applicationstate = ' + applications.applicationstate)
                     }
                 })
             } else {
-                console.log('appliationstate not valid for approval: '+applications.applicationstate)
-                res.send(500,'appliationstate not valid for approval: '+applications.applicationstate)
+                console.log('appliationstate not valid for approval: ' + applications.applicationstate)
+                res.send(500, 'appliationstate not valid for approval: ' + applications.applicationstate)
             }
         }
     })
@@ -540,15 +537,15 @@ server.get('/getdeletedapplications', getdeletedApplications)
 server.get('/logout/:user', logout)
 
 server.post('/applications', postApplication);
-server.post('/createlogin', createLogin)
+server.post('/createlogin', callCreateLogin)
 server.post('/login', login)
-server.post('/sendemail',sendemail)
+server.post('/sendemail', sendemailroute)
 
 server.del('/applications/:id', deleteApplicationById)
 
 server.put('/applications/:id', updateApplicationById)
 server.put('/undeleteapplication/:id', undeleteApplicationById)
-server.put('/approveapplication/:id',approveApplicationById)
+server.put('/approveapplication/:id', approveApplicationById)
 
 
 //include routes

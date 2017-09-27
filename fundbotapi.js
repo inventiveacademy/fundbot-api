@@ -307,7 +307,7 @@ function postApplication(req, res, next) {
     application.zip = req.body.zip
     application.city = req.body.city
     application.state = req.body.state
-    applicatoin.source = req.body.source
+    application.source = req.body.source
     application.applicationstate = 'application'
     application.createdate = date
     application.modifydate = date

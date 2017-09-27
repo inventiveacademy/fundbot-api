@@ -5,27 +5,27 @@ var restify = require('restify')
 var cookieParser = require('cookie-parser')
 var bodyParser = require('body-parser')
 var queryParser = require('query-parser')
-var bcrypt = require('bcrypt');
-const SALT_ROUNDS = 10;
+var bcrypt = require('bcrypt')
+const SALT_ROUNDS = 10
 var server = restify.createServer()
 // mailgun stuff
-var api_key = 'key-6936814213c65cf51b76d57a39587665';
-var domain = 'sandbox33b68518692b4762acf3495d8ced30ac.mailgun.org';
-var mailgun = require('mailgun-js')({ apiKey: api_key, domain: domain });
+var api_key = 'key-6936814213c65cf51b76d57a39587665'
+var domain = 'sandbox33b68518692b4762acf3495d8ced30ac.mailgun.org'
+var mailgun = require('mailgun-js')({ apiKey: api_key, domain: domain })
 
 server.name = 'FundBot API'
 
-server.use(restify.plugins.bodyParser());
-server.use(restify.plugins.queryParser());
+server.use(restify.plugins.bodyParser())
+server.use(restify.plugins.queryParser())
 
 
 // attach the session manager
 
 var secret = "don't tell anyone"
 
-var ObjectId = require('mongodb').ObjectID;
+var ObjectId = require('mongodb').ObjectID
 
-var Schema = mongoose.Schema;
+var Schema = mongoose.Schema
 var applicationSchema = new Schema({
     firstname: String,
     middlename: String,
@@ -42,7 +42,7 @@ var applicationSchema = new Schema({
     createdate: Date,
     modifydate: Date,
     isdeleted: Boolean
-});
+})
 
 var loginSchema = new Schema({
     user: String,
@@ -64,105 +64,99 @@ var loginSchema = new Schema({
     },
     firstname: String,
     lastname: String,
-    email: String
-});
+    email: String,
+    isdeleted: {
+        type: Boolean,
+        default: false
+    },
+})
 
 
 var Application = mongoose.model('Application', applicationSchema)
 var Login = mongoose.model('Login', loginSchema)
 
 
-var exposedRoutes = `
-get '/'                                  = get all
-get '/applications'                      = get all
-get '/applications/:id'                  = get by id
-get '/applications-search?field=fvalue'  = get by search params
-get '/getdeletedapplications'            = get all deleted applications
-get '/logout/:user"                      = logout user                                            
-
-post '/applications'                     = create a new application
-post '/login'                            = login and set lastlogindate send JSON 
-                                           {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
-post '/createlogin                       = create login send JSON 
-                                           {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
-post '/sendemail'                        = send email use JSONobject
-                                            {   from: 'Shalay<smashford12@gmail.com>',
-                                                to: 'rcrutherford@gmail.com',
-                                                subject: 'Hello! Is this working?',
-                                                text: 'You is Beautiful, You is Smart, You is Important' 
-                                            }
-
-del '/applications/:id'                  = soft delete an application
-
-put '/applications/:id'                  = update by id
-put '/undeleteapplication/:id'           = undelete by id
-put '/approveapplication/:id'            = approve application
-======================================================================`
-
-
 //mongodb connection
 // var mongodbUri='mongodb://localhost:27017/fundbot'
-var mongodbUri = 'mongodb://team2:inventive@ds161443.mlab.com:61443/fundbot';
-mongoose.Promise = global.Promise;
-mongoose.connect(mongodbUri, { useMongoClient: true });
-let db = mongoose.connection;
+var mongodbUri = 'mongodb://team2:inventive@ds161443.mlab.com:61443/fundbot'
+mongoose.Promise = global.Promise
+mongoose.connect(mongodbUri, { useMongoClient: true })
+let db = mongoose.connection
 //mongo error
-db.on('error', console.error.bind(console, 'connection error:'));
+db.on('error', console.error.bind(console, 'connection error:'))
 
 // Wait for the database connection to establish, then start the app.
 db.once('open', function() {
     var port = 3008
     server.listen(port, function() {
         console.log('%s listening at %s', server.name, `http://localhost:${port}
-${exposedRoutes}`);
+${exposedRoutes}`)
     })
-});
+})
+
+function hashpassword(pwd) {
+    return new Promise(function(resolve, reject) {
+        bcrypt.hash(pwd, SALT_ROUNDS, function(err, hash) {
+            if (err) reject(err)
+            resolve(hash)
+        })
+    })
+}
+
+function comparepasswords(hash1, hash2) {
+    return new Promise(function(resolve, reject) {
+        bcrypt.compare(hash1, hash2, function(err, tf) {
+            if (err) reject(err)
+            resolve(tf)
+        })
+    })
+}
 
 function isJson(str) {
     try {
-        JSON.parse(str);
+        JSON.parse(str)
     } catch (e) {
-        return false;
+        return false
     }
-    return true;
+    return true
 }
 
 function sendemail(data) {
     mailgun.messages().send(data).then(function(body) {
-        console.log('success: '+JSON.stringify(body))
+        console.log('success: ' + JSON.stringify(body))
         // res.send(200, 'mail sent')
-        return(body)
+        return (body)
     }).catch(function(err) {
-        console.log('sendemail: '+err)
+        console.log('sendemail: ' + err)
         // res.send(500, err)
-        return(err)
+        return (err)
     })
 }
 
-async function sendemailroute(req, res, next) {
+async function sendEmailRoute(req, res, next) {
     var data = req.body
     mailgun.messages().send(data).then(function(body) {
-        console.log('success: '+JSON.stringify(body))
+        console.log('success: ' + JSON.stringify(body))
         res.send(200, 'mail sent')
     }).catch(function(err) {
-        console.log('sendemail: '+err)
+        console.log('sendemail: ' + err)
         res.send(500, err)
     })
 }
 
 function formatNow() {
-    var pad = function(n) { return n < 10 ? "0" + n : n; };
-    var date = new Date();
+    var pad = function(n) { return n < 10 ? "0" + n : n }
+    var date = new Date()
     var dateformatted = date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) +
         " " + pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds()) +
         " " + (date.getTimezoneOffset() > 0 ? "-" : "+") +
         pad(Math.floor(date.getTimezoneOffset() / 60)) +
-        ":" + pad(date.getTimezoneOffset() % 60);
-    return dateformatted;
+        ":" + pad(date.getTimezoneOffset() % 60)
+    return dateformatted
 }
 
 function getApplications(req, res, next) {
-    console.log("get: all");
+    console.log("get: all")
     Application.find({ "isdeleted": false }, function(err, applications) {
         if (err) {
             console.log(err)
@@ -186,7 +180,7 @@ function getApplicationById(req, res, next) {
 }
 
 function getdeletedApplications(req, res, next) {
-    console.log("get: deleted");
+    console.log("get: deleted")
     Application.find({ "isdeleted": true }, function(err, applications) {
         if (err) {
             console.log(err)
@@ -201,7 +195,7 @@ function getdeletedApplications(req, res, next) {
 function getApplicationsByQuery(req, res, next) {
     query = req.query
     query.isdeleted = false
-    console.log("get: by query params " + JSON.stringify(query));
+    console.log("get: by query params " + JSON.stringify(query))
     Application.find(query, function(err, applications) {
         if (err) {
             console.log(err)
@@ -301,7 +295,7 @@ function postApplication(req, res, next) {
     console.log("post")
     var application = new Application()
     // var dateformatted = formatNow()
-    var date = new Date();
+    var date = new Date()
 
     application.firstname = req.body.firstname
     application.middlename = req.body.middlename
@@ -328,39 +322,36 @@ function postApplication(req, res, next) {
     })
 }
 
+
 function login(req, res, next) {
-    bcrypt.hash(req.body.pwd, SALT_ROUNDS, function(err, hash) {
-        console.log("user: " + req.body.user + " pwd: " + req.body.pwd + " hash: " + hash)
+    var pwd = req.body.pwd
+    console.log("trying user: " + req.body.user  )
+    Login.findOne({ "user": req.body.user, "isdeleted": false }, async function(err,login) {
+        if (login) {
+            var tf = await comparepasswords(pwd, login.pwd)
+            if (tf) {
 
-        Login.findOne({ "user": req.body.user }, function(err, user) {
-            if (err) {
-                console.log(err)
-                res.send(500, err)
+                login.lastlogin = new Date()
+                login.isloggedin = true
+                login.save()
+
+                console.log(login.user + ' logged in')
+                res.send(200,login)
             } else {
-                if (!user) {
-                    res.send(401, "User Not Found")
-                } else {
-                    bcrypt.compare(req.body.pwd, hash, function(err, tf) {
-                        if (tf) {
-
-                            user.lastlogin = new Date()
-                            user.isloggedin = true
-                            user.save()
-
-                            console.log(user.user + ' logged in')
-                            res.send(user)
-                        }
-                    })
-                }
+                console.log('no login')
+                res.send(500, 'login error')
             }
-            return next();
-        })
+        } else {
+            console.log('no login')
+            res.send(500, 'login error')
+        }
+        return next()
     })
 }
 
-  
-function createLogin (json) {
-    return new Promise(function (resolve, reject) {
+
+function createLogin(json) {
+    return new Promise(function(resolve, reject) {
         bcrypt.hash(json.pwd, SALT_ROUNDS, function(err, hash) {
             try {
                 console.log('hashed pwd: ' + hash)
@@ -405,18 +396,18 @@ function createLogin (json) {
                 }
             } catch (err2) {
                 console.error(err2)
-                reject(err)
+                reject(err2)
             }
         })
     })
 }
 
 async function callCreateLogin(req, res, next) {
-    var login = await createLogin(req.body).then(function(body) {
-        console.log('success: '+JSON.stringify(body))
+    await createLogin(req.body).then(function(body) {
+        console.log('success: ' + JSON.stringify(body))
         res.send(200, body)
     }).catch(function(err) {
-        console.log('sendemail: '+err)
+        console.log('sendemail: ' + err)
         res.send(500, err)
     })
 }
@@ -445,23 +436,17 @@ function logout(req, res, next) {
 function generateTempPassword() {
     var length = 8,
         charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-        retVal = "";
+        retVal = ""
     for (var i = 0, n = charset.length; i < length; ++i) {
-        retVal += charset.charAt(Math.floor(Math.random() * n));
+        retVal += charset.charAt(Math.floor(Math.random() * n))
     }
-    return retVal;
+    return retVal
 }
 
-function approveApplicationById(req, res, next) {
-    const getPasswordAsPromise = new Promise(function(resolve, reject) {
-        var pwd = generateTempPassword()
-        if (!pwd) {
-            reject(Error("broken Password Promise"))
-        } else {
-            resolve(pwd)
-        }
-    })
+async function approveApplicationById(req, res, next) {
 
+    let tempPWD = await generateTempPassword()
+    let hash =  await hashpassword(tempPWD)
     let id = req.params.id
     console.log("approve: " + id)
     Application.findById(id, function(err, applications) {
@@ -476,41 +461,99 @@ function approveApplicationById(req, res, next) {
                         console.log(err)
                         res.send(500, err)
                     } else {
-                        getPasswordAsPromise.then(function(result) {
-                            bcrypt.hash(result, SALT_ROUNDS,
-                                function(err, hash) {
-                                    var login = new Login()
-                                    login.user = applications.email
+                        Login.findOne({ "user": applications.email }, async function(err,login) {
+                            if (!login) {
+                                bcrypt.hash(tempPWD, SALT_ROUNDS,
+                                    function(err, hash) {
+                                        var login = new Login()
+                                        login.user = applications.email
+                                        login.pwd = hash
 
-                                    login.pwd = hash
-                                    login.save(function(loginsaveerr, loginsaveresult) {
-                                        if (loginsaveerr) {
-                                            console.log(loginsaveerr)
-                                            res.send(500, loginsaveerr)
-                                        } else {
-                                            console.log(login.user + ' ' + ' login saved to database')
-                                            var data = {
-                                                from: 'fundbot@inventive.io',
-                                                to: login.user,
-                                                subject: 'Your FUNDBOT new user info',
-                                                text: `login = your email, password = ${result}  Please change your password after you login the 1st time.  Thanks!`
+                                        login.save(function(loginsaveerr, loginsaveresult) {
+                                            if (loginsaveerr) {
+                                                console.log(loginsaveerr)
+                                                reject(loginsaveerr)
+                                                res.send(500, loginsaveerr)
+                                            } else {
+                                                console.log(login.user + ' ' + ' login saved to database')
+                                                var data = {
+                                                    from: 'fundbot@inventive.io',
+                                                    to: login.user,
+                                                    subject: 'Your FUNDBOT new user info',
+                                                    text: `login = your email, password = ${tempPWD}  Please change your password after you login the 1st time.  Thanks!`
+                                                }
+                                                resolve(data)
+                                                sendemail(data)
                                             }
-                                            sendemail(data)
-                                        }
-                                    })
-                                },
-                                function(err1) {
-                                    console.log('getPasswordAsPromise error: ' + err1)
+                                        })
+                                    }
+                                )
+                            } else {
+                                if (login.isdeleted) {
+                                    res.send(500,'login is deleted')
                                 }
-                            )
+                            }
+                            res.send(200,'applicationstate = ' + applications.applicationstate)
                         })
-                        res.send('applicationstate = ' + applications.applicationstate)
                     }
                 })
             } else {
                 console.log('appliationstate not valid for approval: ' + applications.applicationstate)
                 res.send(500, 'appliationstate not valid for approval: ' + applications.applicationstate)
             }
+        }
+    })
+}
+
+function deleteLogin(req, res, next) {
+    let user = req.params.user
+    console.log("delete: " + user)
+    Login.findOne({ "user": user, "isdeleted": false }, function(err, login) {
+        if (err) {
+            console.log(err)
+            res.send(500, err)
+        } else {
+            login.isdeleted = true
+            login.save(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.send(500, err)
+                } else {
+                    console.log(login.user + ' soft deleted')
+                    res.send(result)
+                }
+            })
+        }
+    })
+}
+
+async function updateLogin(req, res, next) {
+    let user = req.params.user
+    if (req.body.pwd) {
+        var hashedpwd = await hashpassword (req.body.pwd)
+    } 
+    console.log("update: " + user)
+    Login.findOne({ "user": user, "isdeleted": false }, function(err, logins) {
+        if (err) {
+            console.log(err)
+            res.send(500, err)
+        } else {
+            if (req.body.firstname) logins.firstname = req.body.firstname
+            if (req.body.lastname) logins.lastname = req.body.lastname
+            if (req.body.pwd) logins.pwd = hashedpwd
+            if (req.body.isuser) logins.isuser = req.body.isuser
+            if (req.body.isadmin) logins.isadmin = req.body.isadmin
+            if (req.body.isapplicant) logins.isapplicant = req.body.isapplicant
+
+            logins.save(function(err, result) {
+                if (err) {
+                    console.log(err)
+                    res.send(500, err)
+                } else {
+                    console.log(logins.user + ' updated')
+                    res.send(result)
+                }
+            })
         }
     })
 }
@@ -536,35 +579,74 @@ server.get('/applications-search', getApplicationsByQuery)
 server.get('/getdeletedapplications', getdeletedApplications)
 server.get('/logout/:user', logout)
 
-server.post('/applications', postApplication);
-server.post('/createlogin', callCreateLogin)
+
+server.post('/logins', callCreateLogin)
+server.del('logins/:user', deleteLogin)
+
+server.post('/applications', postApplication)
 server.post('/login', login)
-server.post('/sendemail', sendemailroute)
+server.post('/sendemail', sendEmailRoute)
 
 server.del('/applications/:id', deleteApplicationById)
 
 server.put('/applications/:id', updateApplicationById)
 server.put('/undeleteapplication/:id', undeleteApplicationById)
 server.put('/approveapplication/:id', approveApplicationById)
+server.put('/logins/:user', updateLogin)
+
+
+var exposedRoutes = `
+get '/'                                  = get all
+get '/applications'                      = get all
+get '/applications/:id'                  = get by id
+get '/applications-search?field=fvalue'  = get by search params
+get '/getdeletedapplications'            = get all deleted applications
+get '/logout/:user"                      = logout user                                            
+
+post '/applications'                     = create a new application
+post '/login'                            = login and set lastlogindate send JSON:
+                                           {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
+post '/logins                            = create new login send JSON 
+                                           {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
+post '/sendemail'                        = send email use JSONobject
+                                            {   from: 'fundbot@inventive.io',
+                                                to: 'recipient@domain.com',
+                                                subject: 'this is the subject',
+                                                text: 'this is the body of the email' 
+                                            }
+
+del '/applications/:id'                  = soft delete an application
+del '/logins/:user'                      = soft delete a user/login
+
+put '/applications/:id'                  = update by id
+put '/undeleteapplication/:id'           = undelete by id
+put '/approveapplication/:id'            = approve application
+put '/logins/:user'                      = update login/user info send JSON of user
+======================================================================`
 
 
 //include routes
-// let routes = require('./routes/index');
-// server.use('/', routes);
+// let routes = require('./routes/index')
+// server.use('/', routes)
 
 // catch 404 and forward to error handler
 server.use(function(req, res, next) {
     let err = new Error('File Not Found')
     err.status = 404
     next(err)
-});
+})
 
 // error handler
 // define as the last app.use callback
 server.use(function(err, req, res, next) {
-    res.status(err.status || 500);
+    res.status(err.status || 500)
     res.render('error', {
         message: err.message,
         error: {}
-    });
-});
+    })
+})
+
+process.on('unhandledRejection', (reason, p) => {
+  console.log('Unhandled Rejection at: Promise', p, 'reason:', reason)
+  // application specific logging, throwing an error, or other logic here
+})

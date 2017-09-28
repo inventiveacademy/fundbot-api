@@ -595,17 +595,7 @@ async function updateLogin(req, res, next) {
         var hashedpwd = await hashpassword (req.body.pwd)
     } 
     console.log("update: " + user)
-    Login.findOne({ "user": user, "isdeleted": false },
-        {   "user":1,
-            "isuser":1,
-            "isapplicant":1,
-            "isadmin":1,
-            "firstname":1,
-            "lastname":1,
-            "email":1,
-            "isloggedin":1,
-            "lastlogin":1,
-            "_id": 0 }, function(err, logins) {
+    Login.findOne({ "user": user, "isdeleted": false }, function(err, logins) {
         if (err) {
             console.log(err)
             res.send(500, err)

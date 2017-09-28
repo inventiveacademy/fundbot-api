@@ -57,7 +57,6 @@ var loginSchema = new Schema({
     pwd: String,
     lastlogin: Date,
     isloggedin: Boolean,
-    isstudent: Boolean,
     isadmin: {
         type: Boolean,
         default: false
@@ -331,6 +330,61 @@ function postApplication(req, res, next) {
     })
 }
 
+function getLoginsByUser(req, res, next) {
+    let user = req.params.user
+    console.log("lookup user: " + user  )
+    Login.findOne({ "user": user, "isdeleted": false },
+        {   "user":1,
+            "isuser":1,
+            "isapplicant":1,
+            "isadmin":1,
+            "firstname":1,
+            "lastname":1,
+            "email":1,
+            "isloggedin":1,
+            "lastlogin":1,
+            "_id": 0 }, async function(err,login) {
+        if (err) {
+            console.log('ERR: '+ err)
+            res.send(500, err)
+        }
+        if (login) {
+            res.send(200,login)
+        } else {
+            console.log(user+' not Found')
+            res.send(500, user+' not Found')
+        }
+        return next()
+    })
+}
+
+function getLogins(req, res, next) {
+    console.log("get all logins: ")
+    Login.find(
+        {"isdeleted": false },
+        {   "user":1,
+            "isuser":1,
+            "isapplicant":1,
+            "isadmin":1,
+            "firstname":1,
+            "lastname":1,
+            "email":1,
+            "isloggedin":1,
+            "lastlogin":1,
+            "_id": 0 }, async function(err,login) {
+        if (err) {
+            console.log('ERR: '+ err)
+            res.send(500, err)
+        }
+        if (login) {
+                res.send(200,login)
+        } else {
+            console.log('no logins')
+            res.send(500, 'no Logins Found')
+        }
+        return next()
+    })
+}
 
 function login(req, res, next) {
     var pwd = req.body.pwd
@@ -357,7 +411,6 @@ function login(req, res, next) {
         return next()
     })
 }
-
 
 function createLogin(json) {
     return new Promise(function(resolve, reject) {
@@ -542,7 +595,17 @@ async function updateLogin(req, res, next) {
         var hashedpwd = await hashpassword (req.body.pwd)
     } 
     console.log("update: " + user)
-    Login.findOne({ "user": user, "isdeleted": false }, function(err, logins) {
+    Login.findOne({ "user": user, "isdeleted": false },
+        {   "user":1,
+            "isuser":1,
+            "isapplicant":1,
+            "isadmin":1,
+            "firstname":1,
+            "lastname":1,
+            "email":1,
+            "isloggedin":1,
+            "lastlogin":1,
+            "_id": 0 }, function(err, logins) {
         if (err) {
             console.log(err)
             res.send(500, err)
@@ -553,6 +616,10 @@ async function updateLogin(req, res, next) {
             if (req.body.isuser) logins.isuser = req.body.isuser
             if (req.body.isadmin) logins.isadmin = req.body.isadmin
             if (req.body.isapplicant) logins.isapplicant = req.body.isapplicant
+            if (req.body.email) logins.email = req.body.email
+            if (req.body.isloggedin) logins.isloggedin = req.body.isloggedin
+            if (req.body.lastlogin) logins.lastlogin = req.body.lastlogin
+
 
             logins.save(function(err, result) {
                 if (err) {
@@ -589,8 +656,11 @@ server.get('/getdeletedapplications', getdeletedApplications)
 server.get('/logout/:user', logout)
 
 
+server.get('/logins', getLogins)
+server.get('/logins/:user', getLoginsByUser)
 server.post('/logins', callCreateLogin)
-server.del('logins/:user', deleteLogin)
+server.del('/logins/:user', deleteLogin)
+server.put('/logins/:user', updateLogin)
 
 server.post('/applications', postApplication)
 server.post('/login', login)
@@ -601,7 +671,7 @@ server.del('/applications/:id', deleteApplicationById)
 server.put('/applications/:id', updateApplicationById)
 server.put('/undeleteapplication/:id', undeleteApplicationById)
 server.put('/approveapplication/:id', approveApplicationById)
-server.put('/logins/:user', updateLogin)
+
 
 
 var exposedRoutes = `

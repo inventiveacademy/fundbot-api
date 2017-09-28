@@ -17,13 +17,22 @@ server.name = 'FundBot API'
 
 server.use(restify.plugins.bodyParser())
 server.use(restify.plugins.queryParser())
-server.use(
-  function crossOrigin(req,res,next){
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "X-Requested-With");
-    return next();
-  }
-);
+const corsMiddleware = require('restify-cors-middleware')
+const cors = corsMiddleware({
+  preflightMaxAge: 5, //Optional
+  origins: ['*'],
+  allowHeaders: ['API-Token'],
+  exposeHeaders: ['API-Token-Expiry']
+})
+server.pre(cors.preflight)
+server.use(cors.actual)
+// server.use(
+//   function crossOrigin(req,res,next){
+//     res.header("Access-Control-Allow-Origin", "*");
+//     res.header("Access-Control-Allow-Headers", "X-Requested-With");
+//     return next();
+//   }
+// );
 
 
 // attach the session manager
@@ -141,6 +150,7 @@ function sendemail(data) {
 }
 
 async function sendEmailRoute(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     var data = req.body
     mailgun.messages().send(data).then(function(body) {
         console.log('success: ' + JSON.stringify(body))
@@ -163,6 +173,7 @@ function formatNow() {
 }
 
 function getApplications(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     console.log("get: all")
     Application.find({ "isdeleted": false }, function(err, applications) {
         if (err) {
@@ -176,6 +187,7 @@ function getApplications(req, res, next) {
 }
 
 function getApplicationById(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     let id = req.params.id
     console.log("get: " + id)
     Application.findOne({ "isdeleted": false, "_id": id }, function(err, applications) {
@@ -187,6 +199,7 @@ function getApplicationById(req, res, next) {
 }
 
 function getdeletedApplications(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     console.log("get: deleted")
     Application.find({ "isdeleted": true }, function(err, applications) {
         if (err) {
@@ -200,6 +213,7 @@ function getdeletedApplications(req, res, next) {
 }
 
 function getApplicationsByQuery(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     query = req.query
     query.isdeleted = false
     console.log("get: by query params " + JSON.stringify(query))
@@ -215,6 +229,7 @@ function getApplicationsByQuery(req, res, next) {
 }
 
 function updateApplicationById(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     let id = req.params.id
     console.log("update: " + id)
     Application.findById(id, function(err, applications) {
@@ -255,6 +270,7 @@ function updateApplicationById(req, res, next) {
 }
 
 function deleteApplicationById(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     let id = req.params.id
     console.log("delete: " + id)
     Application.findById(id, function(err, applications) {
@@ -277,6 +293,7 @@ function deleteApplicationById(req, res, next) {
 }
 
 function undeleteApplicationById(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     let id = req.params.id
     console.log("undelete: " + id)
     Application.findById(id, function(err, applications) {
@@ -299,6 +316,7 @@ function undeleteApplicationById(req, res, next) {
 }
 
 function postApplication(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     console.log("post")
     var application = new Application()
     // var dateformatted = formatNow()
@@ -331,6 +349,7 @@ function postApplication(req, res, next) {
 }
 
 function getLoginsByUser(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     let user = req.params.user
     console.log("lookup user: " + user  )
     Login.findOne({ "user": user, "isdeleted": false },
@@ -359,6 +378,7 @@ function getLoginsByUser(req, res, next) {
 }
 
 function getLogins(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     console.log("get all logins: ")
     Login.find(
         {"isdeleted": false },
@@ -387,6 +407,7 @@ function getLogins(req, res, next) {
 }
 
 function login(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     var pwd = req.body.pwd
     console.log("trying user: " + req.body.user  )
     Login.findOne({ "user": req.body.user, "isdeleted": false }, async function(err,login) {
@@ -465,6 +486,7 @@ function createLogin(json) {
 }
 
 async function callCreateLogin(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     await createLogin(req.body).then(function(body) {
         console.log('success: ' + JSON.stringify(body))
         res.send(200, body)
@@ -475,6 +497,7 @@ async function callCreateLogin(req, res, next) {
 }
 
 function logout(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     let username = req.params.user
     Login.findOne({ "user": username }, function(err, user) {
         if (err) {
@@ -506,7 +529,7 @@ function generateTempPassword() {
 }
 
 async function approveApplicationById(req, res, next) {
-
+    res.setHeader('Access-Control-Allow-Origin','*');
     let tempPWD = await generateTempPassword()
     let hash =  await hashpassword(tempPWD)
     let id = req.params.id
@@ -568,6 +591,7 @@ async function approveApplicationById(req, res, next) {
 }
 
 function deleteLogin(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     let user = req.params.user
     console.log("delete: " + user)
     Login.findOne({ "user": user, "isdeleted": false }, function(err, login) {
@@ -582,7 +606,7 @@ function deleteLogin(req, res, next) {
                     res.send(500, err)
                 } else {
                     console.log(login.user + ' soft deleted')
-                    res.send(result)
+                    res.send(result.isdeleted)
                 }
             })
         }
@@ -590,6 +614,7 @@ function deleteLogin(req, res, next) {
 }
 
 async function updateLogin(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin','*');
     let user = req.params.user
     if (req.body.pwd) {
         var hashedpwd = await hashpassword (req.body.pwd)

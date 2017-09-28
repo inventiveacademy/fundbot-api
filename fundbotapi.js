@@ -620,7 +620,6 @@ async function updateLogin(req, res, next) {
             if (req.body.isloggedin) logins.isloggedin = req.body.isloggedin
             if (req.body.lastlogin) logins.lastlogin = req.body.lastlogin
 
-
             logins.save(function(err, result) {
                 if (err) {
                     console.log(err)
@@ -672,20 +671,19 @@ server.put('/applications/:id', updateApplicationById)
 server.put('/undeleteapplication/:id', undeleteApplicationById)
 server.put('/approveapplication/:id', approveApplicationById)
 
-
-
 var exposedRoutes = `
 get '/'                                  = get all
-get '/applications'                      = get all
-get '/applications/:id'                  = get by id
-get '/applications-search?field=fvalue'  = get by search params
-get '/getdeletedapplications'            = get all deleted applications
-get '/logout/:user"                      = logout user                                            
 
-post '/applications'                     = create a new application
-post '/login'                            = login and set lastlogindate send JSON:
-                                           {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
+get '/logout/:user'                      = logout user  
+
+get  '/logins'                           = get all logins
+get  '/logins/:user'                     = get one login                                          
+put  '/logins/:user'                     = update login/user info send JSON of user
+del  '/logins/:user'                     = soft delete a user/login
 post '/logins                            = create new login send JSON 
+                                           {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
+
+post '/login'                            = login and set lastlogindate send JSON:
                                            {"user": "xxx@xxx.xxx", "pwd":"mypassword"}
 post '/sendemail'                        = send email use JSONobject
                                             {   from: 'fundbot@inventive.io',
@@ -694,13 +692,17 @@ post '/sendemail'                        = send email use JSONobject
                                                 text: 'this is the body of the email' 
                                             }
 
-del '/applications/:id'                  = soft delete an application
-del '/logins/:user'                      = soft delete a user/login
+get  '/applications'                     = get all
+get  '/applications/:id'                 = get by id
+post '/applications'                     = create a new application
+del  '/applications/:id'                 = soft delete an application
+put  '/applications/:id'                 = update by id
 
-put '/applications/:id'                  = update by id
+get '/applications-search?field=fvalue'  = get by search params
+get '/getdeletedapplications'            = get all deleted applications
 put '/undeleteapplication/:id'           = undelete by id
 put '/approveapplication/:id'            = approve application
-put '/logins/:user'                      = update login/user info send JSON of user
+
 ======================================================================`
 
 

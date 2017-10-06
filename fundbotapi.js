@@ -13,6 +13,11 @@ var api_key = 'key-6936814213c65cf51b76d57a39587665'
 var domain = 'sandbox33b68518692b4762acf3495d8ced30ac.mailgun.org'
 var mailgun = require('mailgun-js')({ apiKey: api_key, domain: domain })
 
+// var paginate = require('restify-paginate')
+// server.use(paginate(server))
+var mongoosePaginate = require('mongoose-paginate');
+
+
 server.name = 'FundBot API'
 
 server.use(restify.plugins.bodyParser())
@@ -26,16 +31,7 @@ const cors = corsMiddleware({
 })
 server.pre(cors.preflight)
 server.use(cors.actual)
-// server.use(
-//   function crossOrigin(req,res,next){
-//     res.header("Access-Control-Allow-Origin", "*");
-//     res.header("Access-Control-Allow-Headers", "X-Requested-With");
-//     return next();
-//   }
-// );
 
-
-// attach the session manager
 
 var secret = "don't tell anyone"
 
@@ -58,8 +54,10 @@ var applicationSchema = new Schema({
     createdate: Date,
     modifydate: Date,
     source: String,
+    loanterms: String,
     isdeleted: Boolean
 })
+applicationSchema.plugin(mongoosePaginate)
 
 var loginSchema = new Schema({
     user: String,
@@ -86,7 +84,7 @@ var loginSchema = new Schema({
         default: false
     },
 })
-
+loginSchema.plugin(mongoosePaginate)
 
 var Application = mongoose.model('Application', applicationSchema)
 var Login = mongoose.model('Login', loginSchema)
@@ -173,15 +171,21 @@ function formatNow() {
 }
 
 function getApplications(req, res, next) {
+    console.log('page: '+req.query.page)
+    let pagingoptions = { 
+        sort: { modifydate: -1 },
+        page : parseInt(req.query.page) || 1,
+        limit : parseInt(req.query.limit) || 10
+    }
     res.setHeader('Access-Control-Allow-Origin','*');
     console.log("get: all")
-    Application.find({ "isdeleted": false }, function(err, applications) {
+    Application.paginate({ "isdeleted": false }, pagingoptions,  function(err, applications) {
         if (err) {
             console.log(err)
             res.send(500, err)
         } else {
             //console.log(applications)
-            res.send(applications)
+            res.send(200,applications);
         }
     })
 }
@@ -251,6 +255,7 @@ function updateApplicationById(req, res, next) {
             if (req.body.state) applications.state = req.body.state
             if (req.body.nationality) applications.nationality = req.body.nationality
             if (req.body.ssn) applications.ssn = req.body.ssn
+            if (req.body.loanterms) applications.loanterms = req.body.loanterms
             // applications.applicationstate = req.body.applicationstate // modified elsewere
             // applications.createdate = req.body.createdate
             if (applications.isdeleted) applications.isdeleted = false
@@ -332,6 +337,7 @@ function postApplication(req, res, next) {
     application.city = req.body.city
     application.state = req.body.state
     application.source = req.body.source
+    application.loanterms = req.body.loanterms
     application.applicationstate = 'application'
     application.createdate = date
     application.modifydate = date
@@ -362,7 +368,7 @@ function getLoginsByUser(req, res, next) {
             "email":1,
             "isloggedin":1,
             "lastlogin":1,
-            "_id": 0 }, async function(err,login) {
+            "_id": 0 }, function(err,login) {
         if (err) {
             console.log('ERR: '+ err)
             res.send(500, err)
@@ -377,34 +383,65 @@ function getLoginsByUser(req, res, next) {
     })
 }
 
+
 function getLogins(req, res, next) {
+    console.log('page: '+req.query.page)
+    let pagingoptions = { 
+        select:  'user isuser isapplicant isadmin firstname lastname email isloggedin lastlogin _id',
+        sort: { user: 1 },
+        page : parseInt(req.query.page) || 1,
+        limit : parseInt(req.query.limit) || 10
+    }
     res.setHeader('Access-Control-Allow-Origin','*');
-    console.log("get all logins: ")
-    Login.find(
-        {"isdeleted": false },
-        {   "user":1,
-            "isuser":1,
-            "isapplicant":1,
-            "isadmin":1,
-            "firstname":1,
-            "lastname":1,
-            "email":1,
-            "isloggedin":1,
-            "lastlogin":1,
-            "_id": 0 }, async function(err,login) {
+    console.log("get: all")
+    
+    Login.paginate({ "isdeleted": false }, pagingoptions,  function(err, applications) {
         if (err) {
-            console.log('ERR: '+ err)
+            console.log(err)
             res.send(500, err)
-        }
-        if (login) {
-                res.send(200,login)
         } else {
-            console.log('no logins')
-            res.send(500, 'no Logins Found')
+            //console.log(applications)
+            res.send(200,applications);
         }
-        return next()
     })
+    return next()
 }
+
+// function xgetLogins(req, res, next) {
+//     let pagingoptions = { 
+//         page : parseInt(req.query.page) || 1,
+//         limit : parseInt(req.query.limit) || 10
+//     }
+//     res.setHeader('Access-Control-Allow-Origin','*');
+//     console.log("get all logins: ")
+//     Login.paginate(
+//         {"isdeleted": false },
+//         {   "user":1,
+//             "isuser":1,
+//             "isapplicant":1,
+//             "isadmin":1,
+//             "firstname":1,
+//             "lastname":1,
+//             "email":1,
+//             "isloggedin":1,
+//             "lastlogin":1,
+//             "_id": 0 },
+//         pagingoptions, 
+//         function(err,logins) {
+//             if (err) {
+//                 console.log('ERR: '+ err)
+//                 res.send(500, err)
+//             }
+//             if (login) {
+//                     res.send(200,logins)
+//             } else {
+//                 console.log('no logins')
+//                 res.send(500, 'no Logins Found')
+//             }
+//             return next()
+//         }
+//     )
+// }
 
 function login(req, res, next) {
     res.setHeader('Access-Control-Allow-Origin','*');
@@ -547,6 +584,10 @@ async function approveApplicationById(req, res, next) {
                         res.send(500, err)
                     } else {
                         Login.findOne({ "user": applications.email }, async function(err,login) {
+                            if (err) {
+                                console.log(err)
+                                res.send(500, err)
+                            }
                             if (!login) {
                                 bcrypt.hash(tempPWD, SALT_ROUNDS,
                                     function(err, hash) {
